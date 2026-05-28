@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      GARMIN_ACTIVITIES_FETCH_LIMIT:
+        type: number
+        default: 10
+env:
+  TZ: 'America/Toronto'
 
 jobs:
   sync:
@@ -11,26 +17,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Sync daily steps
         env:
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMIN_AUTH_TOKEN: ${{ secrets.GARMIN_AUTH_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_STEPS_DB_ID: ${{ secrets.NOTION_STEPS_DB_ID }}
-        run: python src/workflows/daily-steps.py
+          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+          NOTION_PR_DB_ID: ${{ secrets.NOTION_PR_DB_ID }}
+          NOTION_SLEEP_DB_ID: ${{ secrets.NOTION_SLEEP_DB_ID }}
+        run: uv run python -m src.workflows.daily-steps
+        continue-on-error: true
 
       - name: Sync sleep data
         env:
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMIN_AUTH_TOKEN: ${{ secrets.GARMIN_AUTH_TOKEN }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_STEPS_DB_ID: ${{ secrets.NOTION_STEPS_DB_ID }}
+          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+          NOTION_PR_DB_ID: ${{ secrets.NOTION_PR_DB_ID }}
           NOTION_SLEEP_DB_ID: ${{ secrets.NOTION_SLEEP_DB_ID }}
-        run: python src/workflows/sleep-data.py
+        run: uv run python -m src.workflows.sleep-data
